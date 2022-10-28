@@ -10,9 +10,11 @@ require (
 require (
 	github.com/cilium/ebpf v0.7.0 // indirect
 	github.com/hashicorp/golang-lru v0.5.4 // indirect
+	github.com/jgthms/bulma v0.0.0-20221003110823-b3e32a77daca // indirect
 	github.com/konsorten/go-windows-terminal-sequences v1.0.3 // indirect
 	github.com/sirupsen/logrus v1.6.0 // indirect
 	golang.org/x/arch v0.0.0-20190927153633-4e8777c89be4 // indirect
+	golang.org/x/exp v0.0.0-20221026153819-32f3d567a233 // indirect
 )
 
 require (

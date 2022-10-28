@@ -1,11 +1,16 @@
 package main
 
 import (
+	"bytes"
+	"html/template"
+	"io"
 	"net/http"
 	"strings"
 	"time"
 
 	_ "github.com/go-sql-driver/mysql"
+	"github.com/goccy/go-json"
+	"golang.org/x/exp/slices"
 
 	"github.com/gin-gonic/gin"
 
@@ -142,7 +147,10 @@ func GinMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		t := time.Now()
 
-		if c.Request.URL.Path != "/login" {
+		requestPath := c.Request.URL.Path
+		ignoredPaths := []string{"/selaminyum"}
+
+		if slices.Contains(ignoredPaths, requestPath) {
 			token := c.GetHeader("Authorization")
 			_, err := services.ValidateJWT(strings.Replace(token, "Bearer ", "", 1))
 
@@ -163,8 +171,52 @@ func GinMiddleware() gin.HandlerFunc {
 	}
 }
 
+func externalLoginPage(c *gin.Context) {
+	c.HTML(http.StatusOK, "login.html", gin.H{
+		"content": "This is an about page...",
+	})
+}
+
+func externalLogin(c *gin.Context) {
+	var loginModel models.LoginModel
+
+	if err := c.Bind(&loginModel); err != nil {
+		return
+	}
+
+	var loginRequestModel LoginRequestModel
+	loginRequestModel.Sign = loginModel.Username
+	loginRequestModel.Password = loginModel.Password
+	loginRequestModel.DeviceId = "golang :)"
+
+	//[]byte(`{"sign": "test", "password":"test", "deviceId":"golang"}`)
+	jsonBody, err := json.Marshal(loginRequestModel)
+	if err != nil {
+		panic(err.Error())
+	}
+	bodyReader := bytes.NewReader(jsonBody)
+
+	response, err := http.Post("https://notsosecret.snowsparrow.com/account/login", "application/json", bodyReader)
+
+	if err != nil {
+		panic(err.Error())
+	}
+
+	b, err := io.ReadAll(response.Body)
+	if err != nil {
+		panic(err.Error())
+	}
+
+	c.IndentedJSON(http.StatusOK, string(b))
+}
+
 func main() {
 	ginEngine := gin.New()
+	ginEngine.SetFuncMap(template.FuncMap{
+		"upper": strings.ToUpper,
+	})
+	ginEngine.Static("/assets", "./assets")
+	ginEngine.LoadHTMLGlob("templates/*.html")
 
 	ginEngine.Use(GinMiddleware())
 
@@ -177,5 +229,14 @@ func main() {
 	ginEngine.POST("/login", login)
 	ginEngine.GET("/auth-test", authTest)
 
+	ginEngine.GET("/external-login", externalLoginPage)
+	ginEngine.POST("/external-login/", externalLogin)
+
 	ginEngine.Run("localhost:8080")
+}
+
+type LoginRequestModel struct {
+	Sign     string `json:"sign"`
+	Password string `json:"password"`
+	DeviceId string `json:"DeviceId"`
 }
