@@ -171,6 +171,34 @@ func GinMiddleware() gin.HandlerFunc {
 	}
 }
 
+func LoggingMiddlewawre() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		t := time.Now()
+
+		requestPath := c.Request.URL.Path
+		ignoredPaths := []string{"/selaminyum"}
+
+		if slices.Contains(ignoredPaths, requestPath) {
+			token := c.GetHeader("Authorization")
+			_, err := services.ValidateJWT(strings.Replace(token, "Bearer ", "", 1))
+
+			if err != nil {
+				c.AbortWithError(401, err)
+				c.IndentedJSON(http.StatusUnauthorized, err.Error())
+				return
+			}
+		}
+
+		c.Next()
+
+		latency := time.Since(t)
+		print(latency)
+
+		status := c.Writer.Status()
+		print(status)
+	}
+}
+
 func externalLoginPage(c *gin.Context) {
 	c.HTML(http.StatusOK, "login.html", gin.H{
 		"content": "This is an about page...",
